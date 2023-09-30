@@ -1,0 +1,11 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/ElevatorSimulator/ElevatorInterface/obj
+/ElevatorSimulator/.vs/ElevatorSimulator
+/.vs
+/ElevatorSimulator/ElevatorDomain/bin/Debug/net6.0
+/ElevatorSimulator/ElevatorDomain/obj/Debug/net6.0
+/ElevatorSimulator/ElevatorDomain/obj
+/ElevatorSimulator/ElevatorInterface/bin/Debug/net6.0
