@@ -24,7 +24,7 @@ namespace ElevatorDomain
         {
             NoFloors = noFloors;
             UnprocessedCallRequests = new Queue<Request>();
-            Elevators= new Dictionary<Elevator, ElevatorRequestData>();
+            Elevators = new Dictionary<Elevator, ElevatorRequestData>();
             RequestProcessingRate = 100;
         }
 
@@ -37,7 +37,23 @@ namespace ElevatorDomain
 
         public void AddUnprocessedCallRequest(Request request)
         {
-            UnprocessedCallRequests.Enqueue(request);
+            bool isValidRequest = true;
+            if (request.DestinationFloor > NoFloors)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Destination Floor is grater than the top floor of the building");
+                Console.ResetColor();
+                isValidRequest = false;
+            }
+            if (request.SourceFloor < 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Elevator cannot start from beneath the ground floor (0)");
+                Console.ResetColor();
+                isValidRequest = false;
+            }
+            if (isValidRequest)
+                UnprocessedCallRequests.Enqueue(request);
         }
 
 
@@ -67,11 +83,11 @@ namespace ElevatorDomain
 
                     List<int> destinations = elevatorData.DestinationsTree.TraverseInOrder(elevatorData.DestinationsTree.Root);
 
-                    if (destinations.Any() && key.MovementStatus==0)
+                    if (destinations.Any() && key.MovementStatus == 0)
                     {
 
                         Task.Run(async () => key.Move(destinations[0]));
-                    }    
+                    }
 
                 }
             }
@@ -82,7 +98,7 @@ namespace ElevatorDomain
         public void ReceiveElevatorNotification(Elevator sourceElevator)
         {
 
-            var elevatorData= Elevators[sourceElevator];
+            var elevatorData = Elevators[sourceElevator];
 
             //remove the stop that has been executed
             elevatorData.DestinationsTree.Remove(sourceElevator.CurrentFloor);
@@ -98,7 +114,7 @@ namespace ElevatorDomain
                 }
                 if (elevatorData.Requests[i].DestinationFloor == sourceElevator.CurrentFloor)
                 {
-                    exiting+= elevatorData.Requests[i].NoPersons;
+                    exiting += elevatorData.Requests[i].NoPersons;
                     elevatorData.Requests.Remove(elevatorData.Requests[i]);
                 }
             }
@@ -127,28 +143,28 @@ namespace ElevatorDomain
 
             var elevatorsList = Elevators.Keys.ToList();
             Elevator result = elevatorsList[0];
-           
+
             //algorithm to calculate the ideal elevator to come and pick up the people calling for it
-            
+
 
             //because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a liniar search and determinaton could be better here O(N)
             for (int i = 0; i < elevatorsList.Count; i++)
             {
 
-                Elevator candidate= elevatorsList[i];
+                Elevator candidate = elevatorsList[i];
                 int currentDistance = Math.Abs(request.SourceFloor - result.CurrentFloor);
                 int candidateDistance = Math.Abs(request.SourceFloor - candidate.CurrentFloor);
-                bool directionIsGood= (
+                bool directionIsGood = (
                     (request.SourceFloor > candidate.CurrentFloor) &&
                     (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Ascending)
                     ) ||
                    (
-                   (request.SourceFloor <= candidate.CurrentFloor) && 
+                   (request.SourceFloor <= candidate.CurrentFloor) &&
                    (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Descending)
                    );
 
                 //taklle into account capacity as number of people
-                if(candidateDistance<currentDistance && directionIsGood && !(candidate.Occupancy+request.NoPersons>candidate.Capacity))
+                if (candidateDistance < currentDistance && directionIsGood && !(candidate.Occupancy + request.NoPersons > candidate.Capacity))
                     result = candidate;
 
             }
