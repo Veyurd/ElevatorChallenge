@@ -6,16 +6,18 @@ using System.Threading.Tasks;
 
 namespace ElevatorDomain
 {
-    public class CallRequest
+    public class Request
     {
 
-        public CallRequest(int noPerson, int sourceFloor)
+        public Request(int noPerson, int sourceFloor, int destinationFloor)
         {
             NoPersons = noPerson;
             SourceFloor = sourceFloor;
+            DestinationFloor = destinationFloor;
         }
 
         public int NoPersons { get; set; }
         public int SourceFloor { get; set; }
+        public int DestinationFloor { get; set; }
     }
 }

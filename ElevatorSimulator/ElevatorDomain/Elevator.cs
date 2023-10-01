@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static ElevatorDomain.Enums.Enums;
 
 namespace ElevatorDomain
 {
@@ -21,41 +23,48 @@ namespace ElevatorDomain
         public int Occupancy { get; set; }
 
         //todo refactor in enum (descending, ascending, stationary)
-        public int MovementStatus { get; set; }
+        public ElevatorMovementStatus MovementStatus { get; set; }
 
-        public Elevator(string designation, int currentFloor)
+        private Dispatcher Dispatcher { get; set; }
+
+
+        //depending on elevator types this may be faster or slower
+        private int SpeedInMS { get; set; }
+
+
+        public Elevator(string designation, int currentFloor, Dispatcher dispatcher)
         {
             Capacity = 10;
             Occupancy = 0;
             ElevatorDesignator = designation;
             CurrentFloor = currentFloor;
-            MovementStatus = 0;
+            MovementStatus = ElevatorMovementStatus.Stationary;
+            SpeedInMS = 2000;
+            Dispatcher = dispatcher;
         }
 
         public async Task Move(int destinationFloor)
         {
             if (destinationFloor == CurrentFloor)
             {
-                MovementStatus = 0;
-                Console.WriteLine(ElevatorDesignator + " is already on floor " + destinationFloor);
+                MovementStatus = ElevatorMovementStatus.Stationary;
+                //notify dispatcher
+                Dispatcher.ReceiveElevatorNotification(this);
                 return;
             }
 
-            MovementStatus = CurrentFloor < destinationFloor ? 1 : -1;
+            MovementStatus = CurrentFloor < destinationFloor ? ElevatorMovementStatus.Ascending : ElevatorMovementStatus.Descending;
             while (CurrentFloor != destinationFloor)
             {
-                await Task.Delay(1000);
+                await Task.Delay(SpeedInMS);
 
-                if (MovementStatus == 1)
+                if (MovementStatus == ElevatorMovementStatus.Ascending)
                     CurrentFloor++;
-                if (MovementStatus == -1)
+                if (MovementStatus == ElevatorMovementStatus.Descending)
                     CurrentFloor--;
-               
             }
-            MovementStatus = 0;
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(ElevatorDesignator + " has arrived at floor " + CurrentFloor);
-            Console.ResetColor();
+            MovementStatus= ElevatorMovementStatus.Stationary;
+            Dispatcher.ReceiveElevatorNotification(this);
         }
     }
 }
