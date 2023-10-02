@@ -20,8 +20,17 @@ namespace ElevatorDomain
         public void Add(Request request)
         { 
             Requests.Add(request);
-            DestinationsTree.Add(request.SourceFloor);
-            DestinationsTree.Add(request.DestinationFloor);
+
+            if (request.SourceFloor <= request.DestinationFloor)
+            {
+                DestinationsTree.Add(request.SourceFloor);
+                DestinationsTree.Add(request.DestinationFloor);
+            }
+            else
+            {
+                DestinationsTree.Add(-1 * request.SourceFloor);
+                DestinationsTree.Add(-1 * request.SourceFloor);
+            }
         }
     }
 }

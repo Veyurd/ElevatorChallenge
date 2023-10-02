@@ -20,14 +20,14 @@ NoFloors = Convert.ToInt32(Console.ReadLine());
 
 
 //initiate dispatcher and start processing requests
-Dispatcher dispatcher = new Dispatcher(NoFloors);
+StandardDispatcher dispatcher = new StandardDispatcher(NoFloors);
 Task.Run(async () => dispatcher.ProcessRequests());
 
 
 
 for (int i = 0; i < NoElevators; i++)
 {
-    Elevator elevator = new Elevator("Elevator_" + i, 0,dispatcher);
+    StandardElevator elevator = new StandardElevator("Elevator_" + i, 0,dispatcher);
     dispatcher.AddElevator(elevator);
 }
 

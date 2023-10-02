@@ -6,31 +6,33 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using ElevatorDomain.Enums;
+using ElevatorDomain.Interfaces;
 using static ElevatorDomain.Enums.Enums;
 
 namespace ElevatorDomain
 {
-    public class Dispatcher
+    public class StandardDispatcher : IDispatcher
     {
 
 
         private int NoFloors { get; set; }
-        public Queue<Request> UnprocessedCallRequests { get; set; }
-        public Dictionary<Elevator, ElevatorRequestData> Elevators { get; set; }
         private int RequestProcessingRate { get; set; }
+        public Queue<Request> UnprocessedCallRequests { get; set; }
+        public Dictionary<IElevator, ElevatorRequestData> Elevators { get; set; }
 
 
-        public Dispatcher(int noFloors)
+
+        public StandardDispatcher(int noFloors)
         {
             NoFloors = noFloors;
             UnprocessedCallRequests = new Queue<Request>();
-            Elevators = new Dictionary<Elevator, ElevatorRequestData>();
+            Elevators = new Dictionary<IElevator, ElevatorRequestData>();
             RequestProcessingRate = 100;
         }
 
 
 
-        public void AddElevator(Elevator elevator)
+        public void AddElevator(IElevator elevator)
         {
             Elevators.Add(elevator, new ElevatorRequestData());
         }
@@ -85,8 +87,7 @@ namespace ElevatorDomain
 
                     if (destinations.Any() && key.MovementStatus == 0)
                     {
-
-                        Task.Run(async () => key.Move(destinations[0]));
+                        Task.Run(async () => key.Move(Math.Abs(destinations[0])));
                     }
 
                 }
@@ -94,8 +95,7 @@ namespace ElevatorDomain
         }
 
 
-        //for the moment receive a string, we will modify this to a proper info encapsulation
-        public void ReceiveElevatorNotification(Elevator sourceElevator)
+        public void ReceiveElevatorNotification(IElevator sourceElevator)
         {
 
             var elevatorData = Elevators[sourceElevator];
@@ -131,48 +131,59 @@ namespace ElevatorDomain
             List<int> remainingStops = elevatorData.DestinationsTree.TraverseInOrder(elevatorData.DestinationsTree.Root);
             if (remainingStops.Any())
             {
-                Console.WriteLine("Remaining stops:" + String.Join(";", remainingStops));
+                Console.WriteLine("Remaining stops:" + String.Join(";", remainingStops.Select(p=>Math.Abs(p))));
             }
             Console.ResetColor();
 
         }
 
 
-        private Elevator? BestCandidate(Request request)
+        private IElevator? BestCandidate(Request request)
         {
 
             var elevatorsList = Elevators.Keys.ToList();
-            Elevator result = elevatorsList[0];
 
             //algorithm to calculate the ideal elevator to come and pick up the people calling for it
+            IElevator result = null;
 
+            int resultCurrentFloor = int.MaxValue;
 
             //because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a liniar search and determinaton could be better here O(N)
             for (int i = 0; i < elevatorsList.Count; i++)
             {
 
-                Elevator candidate = elevatorsList[i];
-                int currentDistance = Math.Abs(request.SourceFloor - result.CurrentFloor);
+                IElevator candidate = elevatorsList[i];
+                int currentDistance = Math.Abs(request.SourceFloor - resultCurrentFloor);
                 int candidateDistance = Math.Abs(request.SourceFloor - candidate.CurrentFloor);
-                bool directionIsGood = (
-                    (request.SourceFloor > candidate.CurrentFloor) &&
-                    (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Ascending)
-                    ) ||
-                   (
-                   (request.SourceFloor <= candidate.CurrentFloor) &&
-                   (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Descending)
-                   );
+
+                ElevatorMovementStatus orderDirection = request.SourceFloor <= request.DestinationFloor ? ElevatorMovementStatus.Ascending : ElevatorMovementStatus.Descending;
+
+                //bool directionIsGood = (
+                //    (request.SourceFloor > candidate.CurrentFloor) &&
+                //    (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Ascending)
+                //    ) ||
+                //   (
+                //   (request.SourceFloor <= candidate.CurrentFloor) &&
+                //   (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Descending)
+                //   );
+
+                bool directionIsGood = (candidate.MovementStatus == ElevatorMovementStatus.Stationary && Elevators[candidate].Requests.Count==0) ||
+                    (candidate.MovementStatus == ElevatorMovementStatus.Ascending && orderDirection == ElevatorMovementStatus.Ascending && request.SourceFloor >= candidate.CurrentFloor) ||
+                    (candidate.MovementStatus == ElevatorMovementStatus.Descending && orderDirection == ElevatorMovementStatus.Descending && request.SourceFloor <= candidate.CurrentFloor);
 
                 //taklle into account capacity as number of people
                 if (candidateDistance < currentDistance && directionIsGood && !(candidate.Occupancy + request.NoPersons > candidate.Capacity))
+                {
                     result = candidate;
+                    resultCurrentFloor = candidateDistance;
+                }
 
             }
-            //final check to account for result being initiated with the first elevator available
-            if (result.Occupancy + request.NoPersons > result.Capacity)
-                return null;
+   
 
 
+            Console.WriteLine($"?????????--------Elevator {result.ElevatorDesignator} has been selected------------????????");
+                
             return result;
         }
     }

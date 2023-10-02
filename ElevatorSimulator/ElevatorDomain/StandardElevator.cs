@@ -4,11 +4,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ElevatorDomain.Interfaces;
 using static ElevatorDomain.Enums.Enums;
 
 namespace ElevatorDomain
 {
-    public class Elevator
+    public class StandardElevator : IElevator
     {
 
         //text identifier for an elevator
@@ -25,14 +26,16 @@ namespace ElevatorDomain
         //todo refactor in enum (descending, ascending, stationary)
         public ElevatorMovementStatus MovementStatus { get; set; }
 
-        private Dispatcher Dispatcher { get; set; }
+        private IDispatcher Dispatcher { get; set; }
+
+
 
 
         //depending on elevator types this may be faster or slower
         private int SpeedInMS { get; set; }
 
 
-        public Elevator(string designation, int currentFloor, Dispatcher dispatcher)
+        public StandardElevator(string designation, int currentFloor, IDispatcher dispatcher)
         {
             Capacity = 10;
             Occupancy = 0;
@@ -45,6 +48,7 @@ namespace ElevatorDomain
 
         public async Task Move(int destinationFloor)
         {
+
             if (destinationFloor == CurrentFloor)
             {
                 MovementStatus = ElevatorMovementStatus.Stationary;
@@ -63,7 +67,7 @@ namespace ElevatorDomain
                 if (MovementStatus == ElevatorMovementStatus.Descending)
                     CurrentFloor--;
             }
-            MovementStatus= ElevatorMovementStatus.Stationary;
+            MovementStatus = ElevatorMovementStatus.Stationary;
             Dispatcher.ReceiveElevatorNotification(this);
         }
     }

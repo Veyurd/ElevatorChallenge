@@ -5,7 +5,7 @@ namespace TestProject1
     public class Tests
     {
 
-        public Dispatcher Dispatcher { get; set; }
+        public StandardDispatcher Dispatcher { get; set; }
 
         public int NoFloors { get; set; }
 
@@ -14,7 +14,7 @@ namespace TestProject1
         public void Setup()
         {
             NoFloors = 30;
-             Dispatcher = new Dispatcher(NoFloors);
+             Dispatcher = new StandardDispatcher(NoFloors);
             
         }
 
@@ -26,7 +26,7 @@ namespace TestProject1
 
             for (int i=0;i<numberOfElevators; i++)
             {
-                Elevator elevator = new Elevator("elevator"+i, 0, Dispatcher);
+                StandardElevator elevator = new StandardElevator("elevator"+i, 0, Dispatcher);
                 Dispatcher.AddElevator(elevator);
             }
          
