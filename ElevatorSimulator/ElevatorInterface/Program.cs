@@ -27,21 +27,21 @@ Task.Run(async () => dispatcher.ProcessRequests());
 
 for (int i = 0; i < NoElevators; i++)
 {
-    StandardElevator elevator = new StandardElevator("Elevator_" + i, 0,dispatcher);
+    StandardElevator elevator = new StandardElevator("Elevator_" + i, 0);
     dispatcher.AddElevator(elevator);
 }
 
 
 //Main loop opf program execution
 
-while (Input != "Exit")
+while (Input.ToUpper() != "Exit" || Input!="3")
 {
 
     if (Input.ToUpper() == "STATUS" || Input == "1")
     {
         foreach (var elevator in dispatcher.Elevators)
         {
-            Console.WriteLine($@"{elevator.Key.ElevatorDesignator} on level: {elevator.Key.CurrentFloor} status: {elevator.Key.MovementStatus} occupancy: {elevator.Key.Occupancy}");
+            Console.WriteLine($@"{elevator.ElevatorDesignator} on level: {elevator.CurrentFloor} status: {elevator.MovementStatus} occupancy: {elevator.Occupancy}");
         }
     }
 
@@ -54,7 +54,10 @@ while (Input != "Exit")
         Console.WriteLine("How many persons?");
         int occupants=Convert.ToInt32(Console.ReadLine());
 
-        Task.Run(async () => dispatcher.AddUnprocessedCallRequest(new Request(occupants,callingFloor, destinationFloor)));
+
+        Request request = new Request(occupants, callingFloor, destinationFloor);
+
+        Task.Run(async () => dispatcher.AddUnprocessedCallRequest(request));
     }
 
     Console.ForegroundColor = ConsoleColor.Blue;

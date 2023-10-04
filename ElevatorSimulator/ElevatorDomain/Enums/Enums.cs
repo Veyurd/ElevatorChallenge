@@ -14,5 +14,7 @@ namespace ElevatorDomain.Enums
             Stationary=0,
             Ascending=1
         }
+
+
     }
 }
