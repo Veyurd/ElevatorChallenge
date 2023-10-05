@@ -15,16 +15,14 @@ namespace ElevatorDomain
     {
 
 
-        private int NoFloors { get; set; }
         private int RequestProcessingRate { get; set; }
         public Queue<Request> UnprocessedCallRequests { get; set; }
         public List<IElevator> Elevators { get; set; }
 
 
 
-        public StandardDispatcher(int noFloors)
+        public StandardDispatcher()
         {
-            NoFloors = noFloors;
             UnprocessedCallRequests = new Queue<Request>();
             Elevators = new List<IElevator>();
             RequestProcessingRate = 100;
@@ -39,23 +37,7 @@ namespace ElevatorDomain
 
         public void AddUnprocessedCallRequest(Request request)
         {
-            bool isValidRequest = true;
-            if (request.DestinationFloor > NoFloors)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Destination Floor is grater than the top floor of the building");
-                Console.ResetColor();
-                isValidRequest = false;
-            }
-            if (request.SourceFloor < 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Elevator cannot start from beneath the ground floor (0)");
-                Console.ResetColor();
-                isValidRequest = false;
-            }
-            if (isValidRequest)
-                UnprocessedCallRequests.Enqueue(request);
+            UnprocessedCallRequests.Enqueue(request);
         }
 
 
@@ -64,7 +46,6 @@ namespace ElevatorDomain
             while (true)
             {
                 await Task.Delay(RequestProcessingRate);
-                // Console.WriteLine("processingRequests");
                 Request callRequest;
                 UnprocessedCallRequests.TryPeek(out callRequest);
                 if (callRequest != null)
@@ -80,7 +61,7 @@ namespace ElevatorDomain
                 foreach (var elevator in Elevators)
                 {
 
-                    if (elevator.CycleDirection== ElevatorMovementStatus.Ascending)
+                    if (elevator.CycleDirection == ElevatorMovementStatus.Ascending)
                     {
                         if (elevator.MovementStatus == 0)
                         {
@@ -88,7 +69,7 @@ namespace ElevatorDomain
                             Task.Run(async () => elevator.Move());
                         }
                     }
-                    if(elevator.CycleDirection== ElevatorMovementStatus.Descending)
+                    if (elevator.CycleDirection == ElevatorMovementStatus.Descending)
                     {
                         if (elevator.MovementStatus == 0)
                         {
@@ -100,27 +81,30 @@ namespace ElevatorDomain
             }
         }
 
+        /// <summary>
+        /// Algorithm to caluclate the "best" elevator that should service incoming request
+        /// </summary>
+        /// <param name="request">Incoming request</param>
+        /// <returns></returns>
         private IElevator? BestCandidate(Request request)
         {
-
             var elevatorsList = Elevators;
-
-            //algorithm to calculate the ideal elevator to come and pick up the people calling for it
             IElevator result = null;
-
             int resultCurrentFloor = int.MaxValue;
 
-            //because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a liniar search and determinaton could be better here O(N)
+            // Because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a linear search and determination could be better here O(N).
             for (int i = 0; i < elevatorsList.Count; i++)
             {
 
+
+                // Calculate the distance from the requests source floor
                 IElevator candidate = elevatorsList[i];
                 int currentDistance = Math.Abs(request.SourceFloor - resultCurrentFloor);
                 int candidateDistance = Math.Abs(request.SourceFloor - candidate.CurrentFloor);
-           
 
 
 
+                // Calculate if the direction is good based on multiple factors (elevator general direction, pressence of existing stops etc
                 bool directionIsGood = (candidate.MovementStatus == ElevatorMovementStatus.Stationary && !candidate.HasStops()) ||
                     (
                      candidate.MovementStatus == ElevatorMovementStatus.Ascending &&
@@ -135,12 +119,12 @@ namespace ElevatorDomain
                     request.SourceFloor <= candidate.CurrentFloor &&
                         (
                             candidate.SwitchFloor == null ||
-                            (candidate.SwitchFloor.HasValue && request.SourceFloor >= candidate.SwitchFloor.Value && request.DestinationFloor>= candidate.SwitchFloor.Value )
+                            (candidate.SwitchFloor.HasValue && request.SourceFloor >= candidate.SwitchFloor.Value && request.DestinationFloor >= candidate.SwitchFloor.Value)
                         )
 
                     );
 
-                //taklle into account capacity as number of people
+                // This should be refactored to take into account the estimated occupancy at the moment of arrival at the source 
                 if (candidateDistance < currentDistance && directionIsGood && !(candidate.Occupancy + request.NoPersons > candidate.Capacity))
                 {
                     result = candidate;
@@ -148,10 +132,6 @@ namespace ElevatorDomain
                 }
 
             }
-
-
-
-            Console.WriteLine($"?????????--------Elevator {result.ElevatorDesignator} has been selected------------????????");
 
             return result;
         }

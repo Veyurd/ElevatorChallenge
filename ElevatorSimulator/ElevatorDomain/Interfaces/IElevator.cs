@@ -17,5 +17,7 @@
         bool HasStops();
         Task Move();
         void NotifyReachedFloor();
+
+        void DisplayStatus();
     }
 }

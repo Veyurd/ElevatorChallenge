@@ -15,6 +15,8 @@ namespace ElevatorDomain.Validators
 
         private int BottomFloor { get; set; }
 
+        private Request RequestToValidate { get; set; }
+
         public RequestValidator(int bottomFloor, int maxFloor)
         {
             BottomFloor = bottomFloor;
@@ -23,8 +25,10 @@ namespace ElevatorDomain.Validators
 
         public RequestValidator() { }
 
-        public bool IsValid(Request request)
+
+        public bool IsValid(object requestObject)
         {
+            Request request=(Request)requestObject;
             bool isValid = true;
 
             // Request floors must be bounded by bottom and top floor.

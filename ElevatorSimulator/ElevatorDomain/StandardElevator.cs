@@ -23,7 +23,6 @@ namespace ElevatorDomain
 
         public int Occupancy { get; set; }
 
-        //todo refactor in enum (descending, ascending, stationary)
         public ElevatorMovementStatus MovementStatus { get; set; }
 
         //depending on elevator types this may be faster or slower
@@ -36,9 +35,9 @@ namespace ElevatorDomain
         public ElevatorMovementStatus CycleDirection { get; set; }
 
 
+        private IDisplay Display { get; set; }
 
-
-        public StandardElevator(string designation, int currentFloor)
+        public StandardElevator(string designation, int currentFloor, IDisplay display)
         {
             Capacity = 10;
             Occupancy = 0;
@@ -51,12 +50,19 @@ namespace ElevatorDomain
             DescendingStops = new SortedSet<ElevatorStop>(new SortedDescendingElevatorStopComparer());
             CycleDirection = ElevatorMovementStatus.Stationary;
             SwitchFloor = null;
+            Display = display;
         }
 
 
         public bool HasStops()
         {
             return AscendingStops.Any() || DescendingStops.Any();
+        }
+
+
+        public void DisplayStatus()
+        {
+            Display.Display($@"{ElevatorDesignator} on level: {CurrentFloor} status: {MovementStatus} occupancy: {Occupancy}", ConsoleColor.White);
         }
 
         public async Task Move()
@@ -70,8 +76,7 @@ namespace ElevatorDomain
                 if (DestinationFloor.Value == CurrentFloor)
                 {
                     MovementStatus = ElevatorMovementStatus.Stationary;
-                    //notify dispatcher
-                   NotifyReachedFloor();
+                    NotifyReachedFloor();
                     return;
                 }
 
@@ -95,7 +100,7 @@ namespace ElevatorDomain
 
         public void Add(Request request)
         {
-
+            Display.Display($"?????????--------Elevator {ElevatorDesignator} has been selected------------????????",ConsoleColor.Green);
             int currentPosition = CurrentFloor;
 
             // elevator standing still with no orders
@@ -185,13 +190,13 @@ namespace ElevatorDomain
 
             if (goingUpOrders.Count > 0 && CycleDirection == ElevatorMovementStatus.Ascending)
             {
-                Console.WriteLine($"-----------Elevator {ElevatorDesignator} reached floor {floor}, entering persons: {entering}, exiting persons: {Math.Abs(exiting)}, occupancy: {Occupancy}");
-                Console.WriteLine($"-----------Remaining Stops: {String.Join(";", AscendingStops.Select(p => p.Floor))};{String.Join(";", DescendingStops.Select(p => p.Floor))}");
+                Display.Display($"-----------Elevator {ElevatorDesignator} reached floor {floor}, entering persons: {entering}, exiting persons: {Math.Abs(exiting)}, occupancy: {Occupancy}", ConsoleColor.Cyan);
+                Display.Display($"-----------Remaining Stops: {String.Join(";", AscendingStops.Select(p => p.Floor))};{String.Join(";", DescendingStops.Select(p => p.Floor))}", ConsoleColor.Yellow);
             }
             if (CycleDirection == ElevatorMovementStatus.Descending && goingDownOrders.Count > 0)
             {
-                Console.WriteLine($"-----------Elevator {ElevatorDesignator} reached floor {floor}, entering persons: {entering}, exiting persons: {Math.Abs(exiting)}, occupancy: {Occupancy}");
-                Console.WriteLine($"-----------Remaining Stops: {String.Join(";", DescendingStops.Select(p => p.Floor))};{String.Join(";", AscendingStops.Select(p => p.Floor))}");
+                Display.Display($"-----------Elevator {ElevatorDesignator} reached floor {floor}, entering persons: {entering}, exiting persons: {Math.Abs(exiting)}, occupancy: {Occupancy}", ConsoleColor.Cyan);
+                Display.Display($"-----------Remaining Stops: {String.Join(";", DescendingStops.Select(p => p.Floor))};{String.Join(";", AscendingStops.Select(p => p.Floor))}", ConsoleColor.Yellow);
             }
 
 
@@ -203,13 +208,15 @@ namespace ElevatorDomain
             //has handled all his stops
             if (AscendingStops.Count == 0 && DescendingStops.Count == 0)
             {
-                CycleDirection = 0;
-                Console.WriteLine($"-----------Elevator {ElevatorDesignator}: finished orders---------");
+                CycleDirection =ElevatorMovementStatus.Stationary;
+
+                Display.Display($"-----------Elevator {ElevatorDesignator}: finished orders---------", ConsoleColor.Magenta);
             }
         }
     }
 
-
+    // Small helper classes, i'm not very sure how worthwile it would be to externalize them in separate files. Truthfully this could be replaced with Tuple<int,int>.
+    // It's just a pairing between a floor number and a number of incoming/outgoing persons
     public class ElevatorStop
     {
 
