@@ -15,18 +15,16 @@ namespace ElevatorDomain
     {
 
 
-        private int NoFloors { get; set; }
         private int RequestProcessingRate { get; set; }
         public Queue<Request> UnprocessedCallRequests { get; set; }
-        public Dictionary<IElevator, ElevatorRequestData> Elevators { get; set; }
+        public List<IElevator> Elevators { get; set; }
 
 
 
-        public StandardDispatcher(int noFloors)
+        public StandardDispatcher()
         {
-            NoFloors = noFloors;
             UnprocessedCallRequests = new Queue<Request>();
-            Elevators = new Dictionary<IElevator, ElevatorRequestData>();
+            Elevators = new List<IElevator>();
             RequestProcessingRate = 100;
         }
 
@@ -34,28 +32,12 @@ namespace ElevatorDomain
 
         public void AddElevator(IElevator elevator)
         {
-            Elevators.Add(elevator, new ElevatorRequestData());
+            Elevators.Add(elevator);
         }
 
         public void AddUnprocessedCallRequest(Request request)
         {
-            bool isValidRequest = true;
-            if (request.DestinationFloor > NoFloors)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Destination Floor is grater than the top floor of the building");
-                Console.ResetColor();
-                isValidRequest = false;
-            }
-            if (request.SourceFloor < 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Elevator cannot start from beneath the ground floor (0)");
-                Console.ResetColor();
-                isValidRequest = false;
-            }
-            if (isValidRequest)
-                UnprocessedCallRequests.Enqueue(request);
+            UnprocessedCallRequests.Enqueue(request);
         }
 
 
@@ -64,7 +46,6 @@ namespace ElevatorDomain
             while (true)
             {
                 await Task.Delay(RequestProcessingRate);
-                // Console.WriteLine("processingRequests");
                 Request callRequest;
                 UnprocessedCallRequests.TryPeek(out callRequest);
                 if (callRequest != null)
@@ -73,105 +54,77 @@ namespace ElevatorDomain
                     if (elevator != null)
                     {
                         UnprocessedCallRequests.Dequeue();
-                        var commandList = Elevators[elevator];
-                        commandList.Add(callRequest);
-                        Elevators[elevator] = commandList;
+                        elevator.Add(callRequest);
                     }
                 }
 
-                foreach (var key in Elevators.Keys)
+                foreach (var elevator in Elevators)
                 {
-                    var elevatorData = Elevators[key];
 
-                    List<int> destinations = elevatorData.DestinationsTree.TraverseInOrder(elevatorData.DestinationsTree.Root);
-
-                    if (destinations.Any() && key.MovementStatus == 0)
+                    if (elevator.CycleDirection == ElevatorMovementStatus.Ascending)
                     {
-                        Task.Run(async () => key.Move(Math.Abs(destinations[0])));
+                        if (elevator.MovementStatus == 0)
+                        {
+                            elevator.DestinationFloor = elevator.AscendingStops.First().Floor;
+                            Task.Run(async () => elevator.Move());
+                        }
                     }
-
+                    if (elevator.CycleDirection == ElevatorMovementStatus.Descending)
+                    {
+                        if (elevator.MovementStatus == 0)
+                        {
+                            elevator.DestinationFloor = elevator.DescendingStops.First().Floor;
+                            Task.Run(async () => elevator.Move());
+                        }
+                    }
                 }
             }
         }
 
-
-        public void ReceiveElevatorNotification(IElevator sourceElevator)
-        {
-
-            var elevatorData = Elevators[sourceElevator];
-
-            //remove the stop that has been executed
-            elevatorData.DestinationsTree.Remove(sourceElevator.CurrentFloor);
-
-            int entering = 0;
-            int exiting = 0;
-
-            for (int i = 0; i < elevatorData.Requests.Count; i++)
-            {
-                if (elevatorData.Requests[i].SourceFloor == sourceElevator.CurrentFloor)
-                {
-                    entering += elevatorData.Requests[i].NoPersons;
-                }
-                if (elevatorData.Requests[i].DestinationFloor == sourceElevator.CurrentFloor)
-                {
-                    exiting += elevatorData.Requests[i].NoPersons;
-                    elevatorData.Requests.Remove(elevatorData.Requests[i]);
-                }
-            }
-
-            sourceElevator.Occupancy += entering;
-            sourceElevator.Occupancy -= exiting;
-
-
-            Elevators[sourceElevator] = elevatorData;
-
-            Console.ForegroundColor = ConsoleColor.Red;
-
-            Console.WriteLine($"Elevator {sourceElevator.ElevatorDesignator} arrived at floor: {sourceElevator.CurrentFloor}, {entering} persons enter, {exiting} persons exit");
-            List<int> remainingStops = elevatorData.DestinationsTree.TraverseInOrder(elevatorData.DestinationsTree.Root);
-            if (remainingStops.Any())
-            {
-                Console.WriteLine("Remaining stops:" + String.Join(";", remainingStops.Select(p=>Math.Abs(p))));
-            }
-            Console.ResetColor();
-
-        }
-
-
+        /// <summary>
+        /// Algorithm to caluclate the "best" elevator that should service incoming request
+        /// </summary>
+        /// <param name="request">Incoming request</param>
+        /// <returns></returns>
         private IElevator? BestCandidate(Request request)
         {
-
-            var elevatorsList = Elevators.Keys.ToList();
-
-            //algorithm to calculate the ideal elevator to come and pick up the people calling for it
+            var elevatorsList = Elevators;
             IElevator result = null;
-
             int resultCurrentFloor = int.MaxValue;
 
-            //because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a liniar search and determinaton could be better here O(N)
+            // Because elevators are not always sorted via their current floor, and needing a minimum of O(NlogN) to sort them, a linear search and determination could be better here O(N).
             for (int i = 0; i < elevatorsList.Count; i++)
             {
 
+
+                // Calculate the distance from the requests source floor
                 IElevator candidate = elevatorsList[i];
                 int currentDistance = Math.Abs(request.SourceFloor - resultCurrentFloor);
                 int candidateDistance = Math.Abs(request.SourceFloor - candidate.CurrentFloor);
 
-                ElevatorMovementStatus orderDirection = request.SourceFloor <= request.DestinationFloor ? ElevatorMovementStatus.Ascending : ElevatorMovementStatus.Descending;
 
-                //bool directionIsGood = (
-                //    (request.SourceFloor > candidate.CurrentFloor) &&
-                //    (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Ascending)
-                //    ) ||
-                //   (
-                //   (request.SourceFloor <= candidate.CurrentFloor) &&
-                //   (candidate.MovementStatus == ElevatorMovementStatus.Stationary || candidate.MovementStatus == ElevatorMovementStatus.Descending)
-                //   );
 
-                bool directionIsGood = (candidate.MovementStatus == ElevatorMovementStatus.Stationary && Elevators[candidate].Requests.Count==0) ||
-                    (candidate.MovementStatus == ElevatorMovementStatus.Ascending && orderDirection == ElevatorMovementStatus.Ascending && request.SourceFloor >= candidate.CurrentFloor) ||
-                    (candidate.MovementStatus == ElevatorMovementStatus.Descending && orderDirection == ElevatorMovementStatus.Descending && request.SourceFloor <= candidate.CurrentFloor);
+                // Calculate if the direction is good based on multiple factors (elevator general direction, pressence of existing stops etc
+                bool directionIsGood = (candidate.MovementStatus == ElevatorMovementStatus.Stationary && !candidate.HasStops()) ||
+                    (
+                     candidate.MovementStatus == ElevatorMovementStatus.Ascending &&
+                     request.SourceFloor >= candidate.CurrentFloor &&
+                        (
+                            candidate.SwitchFloor == null ||
+                            (candidate.SwitchFloor.HasValue && request.SourceFloor <= candidate.SwitchFloor.Value && request.DestinationFloor <= candidate.SwitchFloor.Value)
+                        )
+                     ) ||
+                    (
+                    candidate.MovementStatus == ElevatorMovementStatus.Descending &&
+                    request.SourceFloor <= candidate.CurrentFloor &&
+                        (
+                            candidate.SwitchFloor == null ||
+                            (candidate.SwitchFloor.HasValue && request.SourceFloor >= candidate.SwitchFloor.Value && request.DestinationFloor >= candidate.SwitchFloor.Value)
+                        )
 
-                //taklle into account capacity as number of people
+                    );
+
+                // This should be refactored to take into account the estimated occupancy at the moment of arrival at the source 
                 if (candidateDistance < currentDistance && directionIsGood && !(candidate.Occupancy + request.NoPersons > candidate.Capacity))
                 {
                     result = candidate;
@@ -179,11 +132,7 @@ namespace ElevatorDomain
                 }
 
             }
-   
 
-
-            Console.WriteLine($"?????????--------Elevator {result.ElevatorDesignator} has been selected------------????????");
-                
             return result;
         }
     }

@@ -1,4 +1,5 @@
 using ElevatorDomain;
+using ElevatorDomain.Interfaces;
 
 namespace TestProject1
 {
@@ -6,6 +7,7 @@ namespace TestProject1
     {
 
         public StandardDispatcher Dispatcher { get; set; }
+        public IDisplay Display { get; set; }
 
         public int NoFloors { get; set; }
 
@@ -14,24 +16,25 @@ namespace TestProject1
         public void Setup()
         {
             NoFloors = 30;
-             Dispatcher = new StandardDispatcher(NoFloors);
-            
+            Dispatcher = new StandardDispatcher();
+            Display = new StandardDisplay();
+
         }
 
         [Test]
         [TestCase("30")]
         public void CheckElevatorsAdded(int numberOfElevators)
         {
-        
 
-            for (int i=0;i<numberOfElevators; i++)
+
+            for (int i = 0; i < numberOfElevators; i++)
             {
-                StandardElevator elevator = new StandardElevator("elevator"+i, 0, Dispatcher);
+                StandardElevator elevator = new StandardElevator("elevator" + i, 0,Display);
                 Dispatcher.AddElevator(elevator);
             }
-         
 
-            Assert.AreEqual(numberOfElevators,Dispatcher.Elevators.Count);
+
+            Assert.AreEqual(numberOfElevators, Dispatcher.Elevators.Count);
         }
 
 
@@ -42,6 +45,6 @@ namespace TestProject1
             Assert.AreEqual(Dispatcher.UnprocessedCallRequests.Count(), 0);
         }
 
-        
+
     }
 }
