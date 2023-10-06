@@ -15,12 +15,13 @@ namespace ElevatorDomain.Validators
 
         private int BottomFloor { get; set; }
 
-        private Request RequestToValidate { get; set; }
+        private int MaxPersonsCountAcrossElevators { get; set; }
 
-        public RequestValidator(int bottomFloor, int maxFloor)
+        public RequestValidator(int bottomFloor, int maxFloor, int maxPersonsCountAcrossElevators)
         {
             BottomFloor = bottomFloor;
             MaxFloor = maxFloor;
+            MaxPersonsCountAcrossElevators = maxPersonsCountAcrossElevators;
         }
 
         public RequestValidator() { }
@@ -38,6 +39,11 @@ namespace ElevatorDomain.Validators
             // Request woth the same source and destination floor makes no sense, won't be taken into consideration by the software.
             if (request.SourceFloor == request.DestinationFloor)
                 isValid = false;
+
+
+            if(request.NoPersons> MaxPersonsCountAcrossElevators)
+                isValid = false;
+
 
             return isValid;
 

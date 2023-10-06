@@ -35,7 +35,6 @@ IDispatcher dispatcher = new StandardDispatcher();
 Task.Run(async () => dispatcher.ProcessRequests());
 
 
-IValidator requestValidator = new RequestValidator(0, MaxFloor);
 
 
 
@@ -44,6 +43,10 @@ for (int i = 0; i < NoElevators; i++)
     StandardElevator elevator = new StandardElevator("Elevator_" + i, 0,Display);
     dispatcher.AddElevator(elevator);
 }
+
+// For simulkation purposes we will asume all elevators have a limit of 10 persons, but in production this could vary depending on elevator types and how many are effectively present in the syustem
+
+IValidator requestValidator = new RequestValidator(0, MaxFloor,10);
 
 
 //Main loop of program execution
