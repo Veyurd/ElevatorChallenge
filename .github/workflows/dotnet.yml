@@ -23,6 +23,6 @@ jobs:
     - name: Restore dependencies
       run: cd ElevatorSimulator || dotnet restore
     - name: Build
-      run: dotnet build --no-restore
+      run: cd ElevatorSimulator || dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: cd ElevatorSimulator || dotnet test --no-build --verbosity normal
