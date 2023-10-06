@@ -29,11 +29,11 @@ namespace ElevatorDomain
         private int SpeedInMS { get; set; }
 
         public int? SwitchFloor { get; set; }
+
         public SortedSet<ElevatorStop> AscendingStops { get; set; }
         public SortedSet<ElevatorStop> DescendingStops { get; set; }
 
         public ElevatorMovementStatus CycleDirection { get; set; }
-
 
         private IDisplay Display { get; set; }
 
@@ -65,14 +65,15 @@ namespace ElevatorDomain
             Display.Display($@"{ElevatorDesignator} on level: {CurrentFloor} status: {MovementStatus} occupancy: {Occupancy}", ConsoleColor.White);
         }
 
+
+        /// <summary>
+        /// Handles movement of the Elevator
+        /// </summary>
+        /// <returns></returns>
         public async Task Move()
         {
-
             if (DestinationFloor.HasValue)
             {
-
-
-
                 if (DestinationFloor.Value == CurrentFloor)
                 {
                     MovementStatus = ElevatorMovementStatus.Stationary;
@@ -97,10 +98,13 @@ namespace ElevatorDomain
         }
 
 
-
+        /// <summary>
+        /// Processes a request and adds floor data to the current ascendin/descending deestionation lists
+        /// </summary>
+        /// <param name="request"></param>
         public void Add(Request request)
         {
-            Display.Display($"?????????--------Elevator {ElevatorDesignator} has been selected------------????????",ConsoleColor.Green);
+            Display.Display($"?????????--------Elevator {ElevatorDesignator} has been selected------------????????", ConsoleColor.Green);
             int currentPosition = CurrentFloor;
 
             // elevator standing still with no orders
@@ -126,24 +130,46 @@ namespace ElevatorDomain
 
             if (currentPosition <= request.SourceFloor)
             {
-                AscendingStops.Add(new ElevatorStop(request.SourceFloor, request.NoPersons));
+                if (AscendingStops.FirstOrDefault(p => p.Floor == request.SourceFloor) != null)
+                {
+                    AscendingStops.FirstOrDefault(p => p.Floor == request.SourceFloor).OccupancyMod += request.NoPersons;
+                }
+                else
+                    AscendingStops.Add(new ElevatorStop(request.SourceFloor, request.NoPersons));
             }
             else
             {
+                if (DescendingStops.FirstOrDefault(p => p.Floor == request.SourceFloor) != null)
+                {
+                    DescendingStops.FirstOrDefault(p => p.Floor == request.SourceFloor).OccupancyMod += request.NoPersons;
+                }
+                else
                 DescendingStops.Add(new ElevatorStop(request.SourceFloor, request.NoPersons));
             }
 
             if (request.DestinationFloor >= request.SourceFloor)
             {
-                AscendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
+                if (AscendingStops.FirstOrDefault(p => p.Floor == request.DestinationFloor) != null)
+                {
+                    AscendingStops.FirstOrDefault(p => p.Floor == request.DestinationFloor).OccupancyMod -= request.NoPersons;
+                }
+                else
+                    AscendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
             }
             else
             {
-                DescendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
+                if (DescendingStops.FirstOrDefault(p => p.Floor == request.DestinationFloor) != null)
+                {
+                    DescendingStops.FirstOrDefault(p => p.Floor == request.DestinationFloor).OccupancyMod -= request.NoPersons;
+                }
+                else
+                    DescendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
             }
         }
 
-
+        /// <summary>
+        /// Handles logic upon reaching a certain floor
+        /// </summary>
         public void NotifyReachedFloor()
         {
             int floor = CurrentFloor;
@@ -208,10 +234,159 @@ namespace ElevatorDomain
             //has handled all his stops
             if (AscendingStops.Count == 0 && DescendingStops.Count == 0)
             {
-                CycleDirection =ElevatorMovementStatus.Stationary;
+                CycleDirection = ElevatorMovementStatus.Stationary;
 
                 Display.Display($"-----------Elevator {ElevatorDesignator}: finished orders---------", ConsoleColor.Magenta);
             }
+        }
+
+
+        /// <summary>
+        /// Calculates if a request can be accepted by the elevator based on current projected occupancy and incoming request numbers
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public bool CanAccomodateNoPersons(Request request)
+        {
+            var SimulatedAscendingStops = new SortedSet<ElevatorStop>(new SortedAscendingElevatorStopComparer());
+            var SimulatedDescendingStops = new SortedSet<ElevatorStop>(new SortedDescendingElevatorStopComparer());
+            int? SimulatedSwitchFloor = null;
+            int simulatedCurrentPosition = CurrentFloor;
+            SimulatedSwitchFloor = SwitchFloor;
+            ElevatorMovementStatus simulatedCycleDirection = CycleDirection;
+
+
+            // Copy stops and ocupancy modifications to the simulated Sorted sets.
+
+            foreach (var stop in AscendingStops)
+                SimulatedAscendingStops.Add(stop);
+            foreach (var stop in DescendingStops)
+                SimulatedDescendingStops.Add(stop);
+
+            //simulate adding this request to the current destination lists and calculate if at any point the elevator would become overpopulated
+
+            // elevator standing still with no orders
+            if (SimulatedAscendingStops.Count == 0 && SimulatedDescendingStops.Count == 0)
+            {
+                if (simulatedCurrentPosition <= request.SourceFloor)
+                    simulatedCycleDirection = ElevatorMovementStatus.Ascending;
+                if (simulatedCurrentPosition > request.SourceFloor)
+                    simulatedCycleDirection = ElevatorMovementStatus.Descending;
+            }
+
+
+            //determine if the request will set a switchfloor
+            if (SimulatedSwitchFloor == null)
+            {
+                if ((simulatedCurrentPosition <= request.SourceFloor && request.SourceFloor > request.DestinationFloor) ||
+                    (simulatedCurrentPosition > request.SourceFloor && request.SourceFloor <= request.DestinationFloor)
+                    )
+                {
+                    SimulatedSwitchFloor = request.SourceFloor;
+                }
+            }
+
+            if (simulatedCurrentPosition <= request.SourceFloor)
+            {
+                SimulatedAscendingStops.Add(new ElevatorStop(request.SourceFloor, request.NoPersons));
+            }
+            else
+            {
+                SimulatedDescendingStops.Add(new ElevatorStop(request.SourceFloor, request.NoPersons));
+            }
+
+            if (request.DestinationFloor >= request.SourceFloor)
+            {
+                SimulatedAscendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
+            }
+            else
+            {
+                SimulatedDescendingStops.Add(new ElevatorStop(request.DestinationFloor, -1 * request.NoPersons));
+            }
+
+
+            bool canBeAccomodated = true;
+            int simulatedOccupancy = Occupancy;
+            if (simulatedCycleDirection == ElevatorMovementStatus.Ascending)
+            {
+                // Elevator going up scan occupancy calculator going up then going down
+                for (int i = 0; i < SimulatedAscendingStops.Count; i++)
+                {
+                    simulatedOccupancy += SimulatedAscendingStops.ElementAt(i).OccupancyMod;
+                    if (simulatedOccupancy > Capacity)
+                    {
+                        canBeAccomodated = false;
+                        // No reason to continue looping
+                        break;
+                    }
+                }
+                for (int i = 0; i < SimulatedDescendingStops.Count; i++)
+                {
+                    simulatedOccupancy += SimulatedDescendingStops.ElementAt(i).OccupancyMod;
+                    if (simulatedOccupancy > Capacity)
+                    {
+                        canBeAccomodated = false;
+                        // No reason to continue looping
+                        break;
+                    }
+                }
+            }
+            if (simulatedCycleDirection == ElevatorMovementStatus.Descending)
+            {
+                // Elevator going down scan occupancy calculator going down then going up
+                for (int i = 0; i < SimulatedDescendingStops.Count; i++)
+                {
+                    simulatedOccupancy += SimulatedDescendingStops.ElementAt(i).OccupancyMod;
+                    if (simulatedOccupancy > Capacity)
+                    {
+                        canBeAccomodated = false;
+                        // No reason to continue looping
+                        break;
+                    }
+                }
+                for (int i = 0; i < SimulatedAscendingStops.Count; i++)
+                {
+                    simulatedOccupancy += SimulatedAscendingStops.ElementAt(i).OccupancyMod;
+                    if (simulatedOccupancy > Capacity)
+                    {
+                        canBeAccomodated = false;
+                        // No reason to continue looping
+                        break;
+                    }
+                }
+
+            }
+
+            return canBeAccomodated;
+        }
+
+        /// <summary>
+        /// Check if a given request can be handled by the elevator based on current cycle movement and inflexion point
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public bool CanAccomodateRequestDirection(Request request)
+        {
+            bool canAccomodate = (MovementStatus == ElevatorMovementStatus.Stationary && !HasStops()) ||
+                    (
+                     MovementStatus == ElevatorMovementStatus.Ascending &&
+                     request.SourceFloor >= CurrentFloor &&
+                        (
+                            (SwitchFloor == null && request.SourceFloor >= CurrentFloor && request.DestinationFloor > request.SourceFloor) ||
+                            (SwitchFloor.HasValue && request.SourceFloor <= SwitchFloor.Value && request.DestinationFloor <= SwitchFloor.Value)
+                        )
+                     ) ||
+                    (
+                    MovementStatus == ElevatorMovementStatus.Descending &&
+                    request.SourceFloor <= CurrentFloor &&
+                        (
+                            (SwitchFloor == null && request.SourceFloor <= Occupancy && request.DestinationFloor < request.SourceFloor) ||
+                            (SwitchFloor.HasValue && request.SourceFloor >= SwitchFloor.Value && request.DestinationFloor >= SwitchFloor.Value)
+                        )
+
+                    );
+
+            return canAccomodate;
         }
     }
 
