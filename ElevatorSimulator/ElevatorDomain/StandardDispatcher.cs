@@ -82,7 +82,8 @@ namespace ElevatorDomain
         }
 
         /// <summary>
-        /// Algorithm to caluclate the "best" elevator that should service incoming request
+        /// Algorithm to caluclate the "best" elevator that should service incoming request.
+        /// Resides in the dispatcher because only the dispatcher has knowledge about all elevators in the system
         /// </summary>
         /// <param name="request">Incoming request</param>
         /// <returns></returns>
@@ -96,36 +97,16 @@ namespace ElevatorDomain
             for (int i = 0; i < elevatorsList.Count; i++)
             {
 
-
                 // Calculate the distance from the requests source floor
                 IElevator candidate = elevatorsList[i];
                 int currentDistance = Math.Abs(request.SourceFloor - resultCurrentFloor);
                 int candidateDistance = Math.Abs(request.SourceFloor - candidate.CurrentFloor);
 
-
-
                 // Calculate if the direction is good based on multiple factors (elevator general direction, pressence of existing stops etc
-                bool directionIsGood = (candidate.MovementStatus == ElevatorMovementStatus.Stationary && !candidate.HasStops()) ||
-                    (
-                     candidate.MovementStatus == ElevatorMovementStatus.Ascending &&
-                     request.SourceFloor >= candidate.CurrentFloor &&
-                        (
-                            candidate.SwitchFloor == null ||
-                            (candidate.SwitchFloor.HasValue && request.SourceFloor <= candidate.SwitchFloor.Value && request.DestinationFloor <= candidate.SwitchFloor.Value)
-                        )
-                     ) ||
-                    (
-                    candidate.MovementStatus == ElevatorMovementStatus.Descending &&
-                    request.SourceFloor <= candidate.CurrentFloor &&
-                        (
-                            candidate.SwitchFloor == null ||
-                            (candidate.SwitchFloor.HasValue && request.SourceFloor >= candidate.SwitchFloor.Value && request.DestinationFloor >= candidate.SwitchFloor.Value)
-                        )
-
-                    );
+                bool directionIsGood = candidate.CanAccomodateRequestDirection(request);
 
                 // This should be refactored to take into account the estimated occupancy at the moment of arrival at the source 
-                if (candidateDistance < currentDistance && directionIsGood && !(candidate.Occupancy + request.NoPersons > candidate.Capacity))
+                if (candidateDistance < currentDistance && directionIsGood && candidate.CanAccomodatePersons(request))
                 {
                     result = candidate;
                     resultCurrentFloor = candidateDistance;

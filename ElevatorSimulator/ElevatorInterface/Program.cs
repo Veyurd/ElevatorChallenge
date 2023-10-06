@@ -48,7 +48,7 @@ for (int i = 0; i < NoElevators; i++)
 
 //Main loop of program execution
 
-while (Input.ToUpper() != "Exit" || Input!="3")
+while (Input.ToUpper() != "EXIT" || Input=="3")
 {
     Console.ForegroundColor = ConsoleColor.Blue;
     Console.WriteLine("-------------------------");

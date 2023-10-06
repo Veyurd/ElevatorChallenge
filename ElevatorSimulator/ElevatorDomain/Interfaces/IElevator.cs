@@ -19,5 +19,7 @@
         void NotifyReachedFloor();
 
         void DisplayStatus();
+        bool CanAccomodatePersons(Request request);
+        bool CanAccomodateRequestDirection(Request request);
     }
 }
