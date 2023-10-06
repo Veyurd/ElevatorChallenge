@@ -20,7 +20,7 @@
         void Work();
 
         void DisplayStatus();
-        bool CanAccomodatePersons(Request request);
+        bool CanAccomodateNoPersons(Request request);
         bool CanAccomodateRequestDirection(Request request);
     }
 }

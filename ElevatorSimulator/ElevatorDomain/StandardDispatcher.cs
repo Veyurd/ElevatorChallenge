@@ -90,7 +90,7 @@ namespace ElevatorDomain
                 bool directionIsGood = candidate.CanAccomodateRequestDirection(request);
 
                 // This should be refactored to take into account the estimated occupancy at the moment of arrival at the source 
-                if (candidateDistance < currentDistance && directionIsGood && candidate.CanAccomodatePersons(request))
+                if (candidateDistance < currentDistance && directionIsGood && candidate.CanAccomodateNoPersons(request))
                 {
                     result = candidate;
                     resultCurrentFloor = candidateDistance;
