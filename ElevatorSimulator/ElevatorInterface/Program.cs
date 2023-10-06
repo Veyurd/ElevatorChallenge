@@ -58,6 +58,7 @@ while (Input.ToUpper() != "EXIT" || Input=="3")
     Console.WriteLine("(3)Exit: closes the program");
     Console.ResetColor();
     Display.Display("Next command: ", ConsoleColor.Green);
+
     Input = Console.ReadLine();
 
     if (Input.ToUpper() == "STATUS" || Input == "1")

@@ -97,6 +97,25 @@ namespace ElevatorDomain
             }
         }
 
+        public void Work()
+        {
+            if (CycleDirection == ElevatorMovementStatus.Ascending)
+            {
+                if (MovementStatus == 0)
+                {
+                    DestinationFloor = AscendingStops.First().Floor;
+                    Task.Run(async () => Move());
+                }
+            }
+            if (CycleDirection == ElevatorMovementStatus.Descending)
+            {
+                if (MovementStatus == 0)
+                {
+                    DestinationFloor = DescendingStops.First().Floor;
+                    Task.Run(async () => Move());
+                }
+            }
+        }
 
         /// <summary>
         /// Processes a request and adds floor data to the current ascendin/descending deestionation lists

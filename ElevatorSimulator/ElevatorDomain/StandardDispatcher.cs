@@ -60,23 +60,7 @@ namespace ElevatorDomain
 
                 foreach (var elevator in Elevators)
                 {
-
-                    if (elevator.CycleDirection == ElevatorMovementStatus.Ascending)
-                    {
-                        if (elevator.MovementStatus == 0)
-                        {
-                            elevator.DestinationFloor = elevator.AscendingStops.First().Floor;
-                            Task.Run(async () => elevator.Move());
-                        }
-                    }
-                    if (elevator.CycleDirection == ElevatorMovementStatus.Descending)
-                    {
-                        if (elevator.MovementStatus == 0)
-                        {
-                            elevator.DestinationFloor = elevator.DescendingStops.First().Floor;
-                            Task.Run(async () => elevator.Move());
-                        }
-                    }
+                    elevator.Work();
                 }
             }
         }

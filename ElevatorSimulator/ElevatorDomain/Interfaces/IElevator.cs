@@ -17,6 +17,7 @@
         bool HasStops();
         Task Move();
         void NotifyReachedFloor();
+        void Work();
 
         void DisplayStatus();
         bool CanAccomodatePersons(Request request);
